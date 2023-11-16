@@ -59,12 +59,21 @@ const SubmitBtn = styled.input`
   }
 `;
 
-export default function PostTweetForm() {
+const CharCount = styled.div`
+  text-align: right;
+  font-size: 14px;
+  color: #aaa;
+`;
+
+export default function PostTweetForm({ replyToTweetId = null }) {
   const [isLoading, setLoading] = useState(false);
   const [tweet, setTweet] = useState("");
+  const [charCount, setCharCount] = useState(0); // char count state
   const [file, setFile] = useState<File | null>(null);
+  const [error, setError] = useState(""); // err msg state
   const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setTweet(e.target.value);
+    setCharCount(e.target.value.length); // update char count
   };
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { files } = e.target;
@@ -76,26 +85,29 @@ export default function PostTweetForm() {
     e.preventDefault();
     const user = auth.currentUser;
     if (!user || isLoading || tweet === "" || tweet.length > 180) return;
+    setLoading(true);
+    setError(""); // reset err msg
     try {
-      setLoading(true);
-      const doc = await addDoc(collection(db, "tweets"), {
+      const tweetData = {
         tweet,
         createdAt: Date.now(),
         username: user.displayName || "Anonymous",
         userId: user.uid,
-      });
+        replyTo: replyToTweetId, // add replyTo field
+      };
+      const doc = await addDoc(collection(db, "tweets"), tweetData);
+
       if (file) {
         const locationRef = ref(storage, `tweets/${user.uid}/${doc.id}`);
         const result = await uploadBytes(locationRef, file);
         const url = await getDownloadURL(result.ref);
-        await updateDoc(doc, {
-          photo: url,
-        });
+        await updateDoc(doc, { photo: url });
       }
       setTweet("");
       setFile(null);
     } catch (e) {
-      console.log(e);
+      setError("Failed to post the tweet. Please try again.");
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -110,6 +122,7 @@ export default function PostTweetForm() {
         value={tweet}
         placeholder="What is happening?!"
       />
+      <CharCount>{180 - charCount} characters remaining</CharCount> {/*Display character count*/}
       <AttachFileButton htmlFor="file">
         {file ? "Photo added ✅" : "Add photo"}
       </AttachFileButton>
@@ -123,6 +136,7 @@ export default function PostTweetForm() {
         type="submit"
         value={isLoading ? "Posting..." : "Post Tweet"}
       />
+      {error && <span>{error}</span>} {/*Display error msg*/}
     </Form>
   );
 }

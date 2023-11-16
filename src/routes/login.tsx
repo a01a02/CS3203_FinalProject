@@ -19,38 +19,38 @@ export default function CreateAccount() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const {
-      target: { name, value },
-    } = e;
-    if (name === "email") {
-      setEmail(value);
-    } else if (name === "password") {
-      setPassword(value);
-    }
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
   };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+  };
+
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
-    if (isLoading || email === "" || password === "") return;
+    if (isLoading) return;
+
+    setLoading(true);
     try {
-      setLoading(true);
       await signInWithEmailAndPassword(auth, email, password);
       navigate("/");
     } catch (e) {
       if (e instanceof FirebaseError) {
-        setError(e.message);
+        setError("Failed to log in. Please check your credentials.");
       }
-    } finally {
       setLoading(false);
     }
   };
+
   return (
     <Wrapper>
       <Title>Log into 𝕏</Title>
       <Form onSubmit={onSubmit}>
         <Input
-          onChange={onChange}
+          onChange={handleEmailChange}
           name="email"
           value={email}
           placeholder="Email"
@@ -58,16 +58,20 @@ export default function CreateAccount() {
           required
         />
         <Input
-          onChange={onChange}
+          onChange={handlePasswordChange}
           value={password}
           name="password"
           placeholder="Password"
           type="password"
           required
         />
-        <Input type="submit" value={isLoading ? "Loading..." : "Log in"} />
+        <Input
+          type="submit"
+          value={isLoading ? "Loading..." : "Log in"}
+          disabled={isLoading}
+        />
       </Form>
-      {error !== "" ? <Error>{error}</Error> : null}
+      {error && <Error>{error}</Error>}
       <Switcher>
         Don't have an account?{" "}
         <Link to="/create-account">Create one &rarr;</Link>
